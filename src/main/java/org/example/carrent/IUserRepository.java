@@ -5,7 +5,8 @@ import java.util.List;
 public interface IUserRepository {
     User getUser(String login);
     List<User> getUsers();
-    void save();
-    void load();
     boolean update(User user);
+    boolean addUser(String login, String password);
+    boolean removeUser(String login);
 }
+

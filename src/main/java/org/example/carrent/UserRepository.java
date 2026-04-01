@@ -36,7 +36,7 @@ public class UserRepository implements IUserRepository {
         return copy;
     }
 
-    @Override
+
     public void save() {
         try (PrintWriter writer = new PrintWriter(new FileWriter(fileName))) {
             for (User user : users) {
@@ -47,7 +47,7 @@ public class UserRepository implements IUserRepository {
         }
     }
 
-    @Override
+
     public void load() {
         users.clear();
 
@@ -93,5 +93,30 @@ public class UserRepository implements IUserRepository {
     private void createDefaultUsers() {
         users.add(new User("user", Authentication.hashPassword("user123"), Role.USER, null));
         users.add(new User("admin", Authentication.hashPassword("admin123"), Role.ADMIN, null));
+    }
+
+    @Override
+    public boolean addUser(String login, String password) {
+        if (getUser(login) != null) {
+            return false;
+        }
+        users.add(new User(login, Authentication.hashPassword(password), Role.USER, null));
+        save();
+        return true;
+    }
+
+    @Override
+    public boolean removeUser(String login) {
+        for (int i = 0; i < users.size(); i++) {
+            if (users.get(i).getLogin().equals(login)) {
+                if (users.get(i).getRentedVehicleId() != null) {
+                    return false; // має випожичаний транспорт
+                }
+                users.remove(i);
+                save();
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -15,10 +15,33 @@ public class ConsoleUI {
         this.authentication = new Authentication(userRepository);
     }
 
+    private void registerUser() {
+        System.out.println("=== REJESTRACJA ===");
+        System.out.print("Login: ");
+        String login = scanner.nextLine();
+        System.out.print("Hasło: ");
+        String password = scanner.nextLine();
+
+        if (userRepository.addUser(login, password)) {
+            System.out.println("Zarejestrowano pomyślnie!");
+        } else {
+            System.out.println("Login już istnieje!");
+        }
+    }
     public void start() {
         while (true) {
-            User loggedUser = login();
+            System.out.println("\n=== SYSTEM WYPOŻYCZALNI ===");
+            System.out.println("1. Zaloguj się");
+            System.out.println("2. Zarejestruj się");
+            System.out.print("Wybierz: ");
+            int choice = readInt();
 
+            if (choice == 2) {
+                registerUser();
+                continue;
+            }
+
+            User loggedUser = login();
             if (loggedUser == null) {
                 System.out.println("Niepoprawny login lub hasło.");
                 continue;
@@ -74,6 +97,7 @@ public class ConsoleUI {
             System.out.println("3. Lista pojazdów");
             System.out.println("4. Lista użytkowników");
             System.out.println("0. Wyloguj");
+            System.out.println("5. Usuń użytkownika");
             System.out.print("Wybierz: ");
             choice = readInt();
 
@@ -82,6 +106,7 @@ public class ConsoleUI {
                 case 2 -> removeVehicle();
                 case 3 -> showVehicles();
                 case 4 -> showUsersWithVehicles();
+                case 5 -> removeUser();
                 case 0 -> System.out.println("Wylogowano.");
                 default -> System.out.println("Niepoprawna opcja.");
             }
@@ -156,6 +181,16 @@ public class ConsoleUI {
             System.out.println("Wypożyczony pojazd: " + vehicle);
         } else {
             System.out.println("Brak wypożyczonego pojazdu.");
+        }
+    }
+    private void removeUser() {
+        System.out.print("Podaj login użytkownika do usunięcia: ");
+        String login = scanner.nextLine();
+
+        if (userRepository.removeUser(login)) {
+            System.out.println("Użytkownik usunięty.");
+        } else {
+            System.out.println("Nie można usunąć: użytkownik nie istnieje lub ma wypożyczony pojazd.");
         }
     }
 
