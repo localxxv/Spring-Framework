@@ -1,12 +1,12 @@
 package org.example.carrent;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface IUserRepository {
-    User getUser(String login);
+    Optional<User> findByLogin(String login);
     List<User> getUsers();
+    void add(User user);
+    boolean remove(String login);
     boolean update(User user);
-    boolean addUser(String login, String password);
-    boolean removeUser(String login);
 }
-

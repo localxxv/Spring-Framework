@@ -1,33 +1,25 @@
 package org.example.carrent;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Scanner;
 
 public class ConsoleUI {
     private final IVehicleRepository vehicleRepository;
     private final IUserRepository userRepository;
-    private final Authentication authentication;
+    private final IRentalRepository rentalRepository;
+    private final AuthService authService;
+    private final RentalService rentalService;
     private final Scanner scanner = new Scanner(System.in);
 
-    public ConsoleUI(IVehicleRepository vehicleRepository, IUserRepository userRepository) {
+    public ConsoleUI(IVehicleRepository vehicleRepository, IUserRepository userRepository, IRentalRepository rentalRepository) {
         this.vehicleRepository = vehicleRepository;
         this.userRepository = userRepository;
-        this.authentication = new Authentication(userRepository);
+        this.rentalRepository = rentalRepository;
+        this.authService = new AuthService(userRepository);
+        this.rentalService = new RentalService(vehicleRepository, rentalRepository);
     }
 
-    private void registerUser() {
-        System.out.println("=== REJESTRACJA ===");
-        System.out.print("Login: ");
-        String login = scanner.nextLine();
-        System.out.print("Hasło: ");
-        String password = scanner.nextLine();
-
-        if (userRepository.addUser(login, password)) {
-            System.out.println("Zarejestrowano pomyślnie!");
-        } else {
-            System.out.println("Login już istnieje!");
-        }
-    }
     public void start() {
         while (true) {
             System.out.println("\n=== SYSTEM WYPOŻYCZALNI ===");
@@ -41,7 +33,7 @@ public class ConsoleUI {
                 continue;
             }
 
-            User loggedUser = login();
+            User loggedUser = loginUser();
             if (loggedUser == null) {
                 System.out.println("Niepoprawny login lub hasło.");
                 continue;
@@ -55,14 +47,31 @@ public class ConsoleUI {
         }
     }
 
-    private User login() {
+    private void registerUser() {
+        System.out.println("=== REJESTRACJA ===");
+        System.out.print("Login: ");
+        String login = scanner.nextLine();
+        System.out.print("Hasło: ");
+        String password = scanner.nextLine();
+
+        RegisterResult result = authService.register(login, password);
+
+        switch (result) {
+            case SUCCESS -> System.out.println("Zarejestrowano pomyślnie!");
+            case EMPTY_LOGIN -> System.out.println("Login nie może być pusty.");
+            case WEAK_PASSWORD -> System.out.println("Hasło jest za słabe. Minimum 4 znaki.");
+            case LOGIN_ALREADY_EXISTS -> System.out.println("Login już istnieje.");
+        }
+    }
+
+    private User loginUser() {
         System.out.println("=== LOGOWANIE ===");
         System.out.print("Login: ");
         String login = scanner.nextLine();
         System.out.print("Hasło: ");
         String password = scanner.nextLine();
 
-        return authentication.authenticate(login, password);
+        return authService.login(login, password).orElse(null);
     }
 
     private void userMenu(User user) {
@@ -72,19 +81,19 @@ public class ConsoleUI {
             System.out.println("1. Wypożycz pojazd");
             System.out.println("2. Zwróć pojazd");
             System.out.println("3. Pokaż moje dane");
+            System.out.println("4. Lista dostępnych pojazdów");
             System.out.println("0. Wyloguj");
             System.out.print("Wybierz: ");
             choice = readInt();
 
             switch (choice) {
-                case 1 -> rentVehicleForUser(user);
-                case 2 -> returnVehicleForUser(user);
+                case 1 -> rentVehicle(user);
+                case 2 -> returnVehicle(user);
                 case 3 -> showUserData(user);
+                case 4 -> showAvailableVehicles();
                 case 0 -> System.out.println("Wylogowano.");
                 default -> System.out.println("Niepoprawna opcja.");
             }
-
-            user = userRepository.getUser(user.getLogin());
         } while (choice != 0);
     }
 
@@ -94,110 +103,147 @@ public class ConsoleUI {
             System.out.println("\n=== MENU ADMIN ===");
             System.out.println("1. Dodaj pojazd");
             System.out.println("2. Usuń pojazd");
-            System.out.println("3. Lista pojazdów");
+            System.out.println("3. Lista wszystkich pojazdów");
             System.out.println("4. Lista użytkowników");
-            System.out.println("0. Wyloguj");
             System.out.println("5. Usuń użytkownika");
+            System.out.println("6. Lista wypożyczeń");
+            System.out.println("0. Wyloguj");
             System.out.print("Wybierz: ");
             choice = readInt();
 
             switch (choice) {
                 case 1 -> addVehicle();
                 case 2 -> removeVehicle();
-                case 3 -> showVehicles();
-                case 4 -> showUsersWithVehicles();
+                case 3 -> showAllVehicles();
+                case 4 -> showUsers();
                 case 5 -> removeUser();
+                case 6 -> showAllRentals();
                 case 0 -> System.out.println("Wylogowano.");
                 default -> System.out.println("Niepoprawna opcja.");
             }
         } while (choice != 0);
     }
 
-    private void showVehicles() {
-        List<Vehicle> vehicles = vehicleRepository.getVehicles();
+    private void rentVehicle(User user) {
+        List<Vehicle> available = vehicleRepository.getVehicles()
+                .stream()
+                .filter(v -> !v.isRented())
+                .toList();
 
+        if (available.isEmpty()) {
+            System.out.println("Brak dostępnych pojazdów.");
+            return;
+        }
+
+        System.out.println("=== DOSTĘPNE POJAZDY ===");
+        for (Vehicle v : available) {
+            System.out.println(v);
+        }
+
+        System.out.print("Podaj ID pojazdu: ");
+        String id = scanner.nextLine();
+
+        if (rentalService.rent(user.getLogin(), id)) {
+            System.out.println("Pojazd wypożyczony!");
+        } else {
+            System.out.println("Nie udało się wypożyczyć.");
+        }
+    }
+
+    private void returnVehicle(User user) {
+        if (rentalService.returnVehicle(user.getLogin())) {
+            System.out.println("Pojazd zwrócony!");
+        } else {
+            System.out.println("Nie masz wypożyczonego pojazdu.");
+        }
+    }
+
+    private void showUserData(User user) {
+        System.out.println("Dane: " + user);
+
+        Optional<Rental> rental = rentalRepository.findActiveByUserLogin(user.getLogin());
+        if (rental.isPresent()) {
+            vehicleRepository.findById(rental.get().getVehicleId())
+                    .ifPresent(v -> System.out.println("Wypożyczony pojazd: " + v));
+        } else {
+            System.out.println("Brak wypożyczonego pojazdu.");
+        }
+    }
+
+    private void showAvailableVehicles() {
+        List<Vehicle> available = vehicleRepository.getVehicles()
+                .stream()
+                .filter(v -> !v.isRented())
+                .toList();
+
+        if (available.isEmpty()) {
+            System.out.println("Brak dostępnych pojazdów.");
+            return;
+        }
+
+        for (Vehicle v : available) {
+            System.out.println(v);
+        }
+    }
+
+    private void showAllVehicles() {
+        List<Vehicle> vehicles = vehicleRepository.getVehicles();
         if (vehicles.isEmpty()) {
             System.out.println("Brak pojazdów.");
             return;
         }
 
-        for (Vehicle vehicle : vehicles) {
-            System.out.println(vehicle);
+        for (Vehicle v : vehicles) {
+            System.out.println(v);
         }
     }
 
-    private void rentVehicleForUser(User user) {
-        if (user.getRentedVehicleId() != null) {
-            System.out.println("Masz już wypożyczony pojazd.");
+    private void showUsers() {
+        List<User> users = userRepository.getUsers();
+        if (users.isEmpty()) {
+            System.out.println("Brak użytkowników.");
             return;
         }
 
-        showVehicles();
-
-        System.out.print("Podaj ID pojazdu do wypożyczenia: ");
-        String id = scanner.nextLine();
-
-        Vehicle vehicle = vehicleRepository.getVehicle(id);
-        if (vehicle == null) {
-            System.out.println("Pojazd nie istnieje.");
-            return;
-        }
-
-        if (vehicle.isRented()) {
-            System.out.println("Pojazd jest już wypożyczony.");
-            return;
-        }
-
-        if (vehicleRepository.rentVehicle(id)) {
-            user.setRentedVehicleId(id);
-            userRepository.update(user);
-            System.out.println("Pojazd został wypożyczony.");
-        } else {
-            System.out.println("Nie udało się wypożyczyć pojazdu.");
+        for (User u : users) {
+            System.out.println(u);
+            rentalRepository.findActiveByUserLogin(u.getLogin())
+                    .ifPresent(r -> vehicleRepository.findById(r.getVehicleId())
+                            .ifPresent(v -> System.out.println("  -> " + v)));
         }
     }
 
-    private void returnVehicleForUser(User user) {
-        if (user.getRentedVehicleId() == null) {
-            System.out.println("Nie masz wypożyczonego pojazdu.");
+    private void showAllRentals() {
+        List<Rental> rentals = rentalRepository.getAll();
+        if (rentals.isEmpty()) {
+            System.out.println("Brak wypożyczeń.");
             return;
         }
 
-        if (vehicleRepository.returnVehicle(user.getRentedVehicleId())) {
-            user.setRentedVehicleId(null);
-            userRepository.update(user);
-            System.out.println("Pojazd został zwrócony.");
-        } else {
-            System.out.println("Nie udało się zwrócić pojazdu.");
+        for (Rental rental : rentals) {
+            System.out.println(rental);
         }
     }
 
-    private void showUserData(User user) {
-        User current = userRepository.getUser(user.getLogin());
-        System.out.println("Dane użytkownika: " + current);
-
-        if (current.getRentedVehicleId() != null) {
-            Vehicle vehicle = vehicleRepository.getVehicle(current.getRentedVehicleId());
-            System.out.println("Wypożyczony pojazd: " + vehicle);
-        } else {
-            System.out.println("Brak wypożyczonego pojazdu.");
-        }
-    }
     private void removeUser() {
         System.out.print("Podaj login użytkownika do usunięcia: ");
         String login = scanner.nextLine();
 
-        if (userRepository.removeUser(login)) {
+        if (rentalService.hasActiveRental(login)) {
+            System.out.println("Nie można usunąć: użytkownik ma wypożyczony pojazd.");
+            return;
+        }
+
+        if (userRepository.remove(login)) {
             System.out.println("Użytkownik usunięty.");
         } else {
-            System.out.println("Nie można usunąć: użytkownik nie istnieje lub ma wypożyczony pojazd.");
+            System.out.println("Użytkownik nie istnieje.");
         }
     }
 
     private void addVehicle() {
-        System.out.println("1. Car");
-        System.out.println("2. Motorcycle");
-        System.out.print("Wybierz typ pojazdu: ");
+        System.out.println("1. Car  2. Motorcycle");
+        System.out.print("Wybierz typ: ");
         int type = readInt();
 
         System.out.print("ID: ");
@@ -216,63 +262,37 @@ public class ConsoleUI {
         if (type == 1) {
             added = vehicleRepository.add(new Car(id, brand, model, year, price, false));
         } else if (type == 2) {
-            System.out.print("Kategoria prawa jazdy (A, A1, A2, AM): ");
+            System.out.print("Kategoria (A, A1, A2, AM): ");
             String cat = scanner.nextLine().toUpperCase();
-            LicenseCategory category;
+
             try {
-                category = LicenseCategory.valueOf(cat);
+                added = vehicleRepository.add(
+                        new Motorcycle(id, brand, model, year, price, false, LicenseCategory.valueOf(cat))
+                );
             } catch (IllegalArgumentException e) {
-                System.out.println("Niepoprawna kategoria prawa jazdy.");
+                System.out.println("Niepoprawna kategoria.");
                 return;
             }
-            added = vehicleRepository.add(new Motorcycle(id, brand, model, year, price, false, category));
         } else {
             System.out.println("Niepoprawny typ pojazdu.");
             return;
         }
 
-        if (added) {
-            System.out.println("Dodano pojazd.");
-        } else {
-            System.out.println("Nie udało się dodać pojazdu. ID prawdopodobnie już istnieje.");
-        }
+        System.out.println(added ? "Dodano pojazd." : "Nie udało się dodać. ID już istnieje.");
     }
 
     private void removeVehicle() {
-        System.out.print("Podaj ID pojazdu do usunięcia: ");
+        System.out.print("Podaj ID pojazdu: ");
         String id = scanner.nextLine();
-
-        if (vehicleRepository.remove(id)) {
-            System.out.println("Usunięto pojazd.");
-        } else {
-            System.out.println("Nie udało się usunąć pojazdu.");
-        }
-    }
-
-    private void showUsersWithVehicles() {
-        List<User> users = userRepository.getUsers();
-
-        if (users.isEmpty()) {
-            System.out.println("Brak użytkowników.");
-            return;
-        }
-
-        for (User user : users) {
-            System.out.println(user);
-            if (user.getRentedVehicleId() != null) {
-                Vehicle vehicle = vehicleRepository.getVehicle(user.getRentedVehicleId());
-                System.out.println("  -> " + vehicle);
-            }
-        }
+        System.out.println(vehicleRepository.remove(id) ? "Usunięto." : "Nie udało się usunąć.");
     }
 
     private int readInt() {
         while (true) {
             try {
-                String input = scanner.nextLine();
-                return Integer.parseInt(input);
+                return Integer.parseInt(scanner.nextLine());
             } catch (NumberFormatException e) {
-                System.out.print("Podaj poprawną liczbę całkowitą: ");
+                System.out.print("Podaj liczbę: ");
             }
         }
     }
@@ -280,10 +300,9 @@ public class ConsoleUI {
     private double readDouble() {
         while (true) {
             try {
-                String input = scanner.nextLine();
-                return Double.parseDouble(input);
+                return Double.parseDouble(scanner.nextLine());
             } catch (NumberFormatException e) {
-                System.out.print("Podaj poprawną liczbę: ");
+                System.out.print("Podaj liczbę: ");
             }
         }
     }

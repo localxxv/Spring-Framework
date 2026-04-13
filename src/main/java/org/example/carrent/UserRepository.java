@@ -1,81 +1,82 @@
 package org.example.carrent;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
 import java.io.*;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class UserRepository implements IUserRepository {
-    private final List<User> users = new ArrayList<>();
-    private final String fileName;
+    private List<User> users = new ArrayList<>();
+    private String fileName;
+    private final Gson gson = new Gson();
 
     public UserRepository() {
-        this("users.csv");
+        this.fileName = "test-users.json";
     }
 
     public UserRepository(String fileName) {
         this.fileName = fileName;
         load();
-    }
-
-    @Override
-    public User getUser(String login) {
-        for (User user : users) {
-            if (user.getLogin().equals(login)) {
-                return user.copy();
-            }
+        if (users.isEmpty()) {
+            createDefaultUsers();
+            save();
         }
-        return null;
     }
 
-    @Override
-    public List<User> getUsers() {
-        List<User> copy = new ArrayList<>();
-        for (User user : users) {
-            copy.add(user.copy());
-        }
-        return copy;
-    }
-
-
-    public void save() {
-        try (PrintWriter writer = new PrintWriter(new FileWriter(fileName))) {
-            for (User user : users) {
-                writer.println(user.toCSV());
-            }
+    private void save() {
+        try (Writer writer = new FileWriter(fileName)) {
+            gson.toJson(users, writer);
         } catch (IOException e) {
             System.out.println("Błąd zapisu użytkowników: " + e.getMessage());
         }
     }
 
-
-    public void load() {
-        users.clear();
-
+    private void load() {
         File file = new File(fileName);
-        if (!file.exists()) {
-            createDefaultUsers();
-            save();
-            return;
-        }
+        if (!file.exists()) return;
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.isBlank()) {
-                    continue;
-                }
-
-                String[] parts = line.split(";");
-                String login = parts[0];
-                String passwordHash = parts[1];
-                Role role = Role.valueOf(parts[2]);
-                String rentedVehicleId = (parts.length > 3 && !parts[3].isEmpty()) ? parts[3] : null;
-
-                users.add(new User(login, passwordHash, role, rentedVehicleId));
-            }
+        try (Reader reader = new FileReader(fileName)) {
+            Type type = new TypeToken<List<User>>() {}.getType();
+            List<User> loaded = gson.fromJson(reader, type);
+            if (loaded != null) users = loaded;
         } catch (IOException e) {
             System.out.println("Błąd odczytu użytkowników: " + e.getMessage());
         }
+    }
+
+    @Override
+    public Optional<User> findByLogin(String login) {
+        return users.stream()
+                .filter(u -> u.getLogin().equals(login))
+                .findFirst();
+    }
+
+    @Override
+    public List<User> getUsers() {
+        List<User> copy = new ArrayList<>();
+        for (User u : users) {
+            copy.add(u.copy());
+        }
+        return copy;
+    }
+
+    @Override
+    public void add(User user) {
+        users.add(user.copy());
+        save();
+    }
+
+    @Override
+    public boolean remove(String login) {
+        boolean removed = users.removeIf(u -> u.getLogin().equals(login));
+        if (removed) {
+            save();
+        }
+        return removed;
     }
 
     @Override
@@ -91,32 +92,7 @@ public class UserRepository implements IUserRepository {
     }
 
     private void createDefaultUsers() {
-        users.add(new User("user", Authentication.hashPassword("user123"), Role.USER, null));
-        users.add(new User("admin", Authentication.hashPassword("admin123"), Role.ADMIN, null));
-    }
-
-    @Override
-    public boolean addUser(String login, String password) {
-        if (getUser(login) != null) {
-            return false;
-        }
-        users.add(new User(login, Authentication.hashPassword(password), Role.USER, null));
-        save();
-        return true;
-    }
-
-    @Override
-    public boolean removeUser(String login) {
-        for (int i = 0; i < users.size(); i++) {
-            if (users.get(i).getLogin().equals(login)) {
-                if (users.get(i).getRentedVehicleId() != null) {
-                    return false; // має випожичаний транспорт
-                }
-                users.remove(i);
-                save();
-                return true;
-            }
-        }
-        return false;
+        users.add(new User("user", AuthService.hashPassword("user123"), Role.USER));
+        users.add(new User("admin", AuthService.hashPassword("admin123"), Role.ADMIN));
     }
 }

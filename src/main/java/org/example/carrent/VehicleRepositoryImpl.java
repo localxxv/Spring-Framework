@@ -1,72 +1,63 @@
 package org.example.carrent;
 
+import com.google.gson.*;
+import com.google.gson.reflect.TypeToken;
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
+import java.lang.reflect.Type;
+import java.util.*;
 
 public class VehicleRepositoryImpl implements IVehicleRepository {
-    private final List<Vehicle> vehicles = new ArrayList<>();
+    private List<Vehicle> vehicles = new ArrayList<>();
     private final String fileName;
-
-    public VehicleRepositoryImpl() {
-        this("vehicles.csv");
-    }
+    private final Gson gson;
 
     public VehicleRepositoryImpl(String fileName) {
         this.fileName = fileName;
+        this.gson = new GsonBuilder()
+                .registerTypeAdapter(Vehicle.class, new VehicleDeserializer())
+                .create();
         load();
     }
 
-    @Override
-    public boolean rentVehicle(String id) {
-        for (Vehicle vehicle : vehicles) {
-            if (vehicle.getId().equals(id) && !vehicle.isRented()) {
-                vehicle.setRented(true);
-                save();
-                return true;
-            }
+    public VehicleRepositoryImpl() {
+        this("test-vehicles.json");
+    }
+
+    private void save() {
+        try (Writer writer = new FileWriter(fileName)) {
+            gson.toJson(vehicles, writer);
+        } catch (IOException e) {
+            System.out.println("Błąd zapisu pojazdów: " + e.getMessage());
         }
-        return false;
+    }
+
+    private void load() {
+        File file = new File(fileName);
+        if (!file.exists()) return;
+        try (Reader reader = new FileReader(fileName)) {
+            Type type = new TypeToken<List<Vehicle>>(){}.getType();
+            List<Vehicle> loaded = gson.fromJson(reader, type);
+            if (loaded != null) vehicles = loaded;
+        } catch (IOException e) {
+            System.out.println("Błąd odczytu pojazdów: " + e.getMessage());
+        }
     }
 
     @Override
-    public boolean returnVehicle(String id) {
-        for (Vehicle vehicle : vehicles) {
-            if (vehicle.getId().equals(id) && vehicle.isRented()) {
-                vehicle.setRented(false);
-                save();
-                return true;
-            }
-        }
-        return false;
+    public Optional<Vehicle> findById(String id) {
+        return vehicles.stream().filter(v -> v.getId().equals(id)).findFirst();
     }
 
     @Override
     public List<Vehicle> getVehicles() {
         List<Vehicle> copy = new ArrayList<>();
-        for (Vehicle vehicle : vehicles) {
-            copy.add(vehicle.copy());
-        }
+        for (Vehicle v : vehicles) copy.add(v.copy());
         return copy;
     }
 
     @Override
-    public Vehicle getVehicle(String id) {
-        for (Vehicle vehicle : vehicles) {
-            if (vehicle.getId().equals(id)) {
-                return vehicle.copy();
-            }
-        }
-        return null;
-    }
-
-    @Override
     public boolean add(Vehicle vehicle) {
-        for (Vehicle v : vehicles) {
-            if (v.getId().equals(vehicle.getId())) {
-                return false;
-            }
-        }
+        if (findById(vehicle.getId()).isPresent()) return false;
         vehicles.add(vehicle);
         save();
         return true;
@@ -74,13 +65,19 @@ public class VehicleRepositoryImpl implements IVehicleRepository {
 
     @Override
     public boolean remove(String id) {
+        Optional<Vehicle> v = findById(id);
+        if (v.isEmpty()) return false;
+        if (v.get().isRented()) return false;
+        vehicles.removeIf(vehicle -> vehicle.getId().equals(id));
+        save();
+        return true;
+    }
+
+    @Override
+    public boolean update(Vehicle updated) {
         for (int i = 0; i < vehicles.size(); i++) {
-            Vehicle vehicle = vehicles.get(i);
-            if (vehicle.getId().equals(id)) {
-                if (vehicle.isRented()) {
-                    return false;
-                }
-                vehicles.remove(i);
+            if (vehicles.get(i).getId().equals(updated.getId())) {
+                vehicles.set(i, updated);
                 save();
                 return true;
             }
@@ -88,71 +85,17 @@ public class VehicleRepositoryImpl implements IVehicleRepository {
         return false;
     }
 
-    private void addIfUniqueId(Vehicle vehicle) {
-        for (Vehicle v : vehicles) {
-            if (v.getId().equals(vehicle.getId())) {
-                System.out.println("Pominięto pojazd z duplikatem ID: " + vehicle.getId());
-                return;
+    // Gson не знає чи це Car чи Motorcycle — цей клас допомагає
+    private static class VehicleDeserializer implements JsonDeserializer<Vehicle> {
+        @Override
+        public Vehicle deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext ctx)
+                throws JsonParseException {
+            JsonObject obj = json.getAsJsonObject();
+            if (obj.has("category")) {
+                return ctx.deserialize(json, Motorcycle.class);
+            } else {
+                return ctx.deserialize(json, Car.class);
             }
-        }
-        vehicles.add(vehicle);
-    }
-
-
-    public void save() {
-        try (PrintWriter writer = new PrintWriter(new FileWriter(fileName))) {
-            for (Vehicle vehicle : vehicles) {
-                writer.println(vehicle.toCSV());
-            }
-        } catch (IOException e) {
-            System.out.println("Błąd podczas zapisu do pliku: " + e.getMessage());
-        }
-    }
-
-
-    public void load() {
-        vehicles.clear();
-
-        File file = new File(fileName);
-        if (!file.exists()) {
-            System.out.println("Plik " + fileName + " nie istnieje. Tworzę pustą bazę.");
-            return;
-        }
-
-        try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
-            String line;
-
-            while ((line = reader.readLine()) != null) {
-                if (line.isBlank()) {
-                    continue;
-                }
-
-                String[] parts = line.split(";");
-
-                String type = parts[0];
-                String id = parts[1];
-                String brand = parts[2];
-                String model = parts[3];
-                int year = Integer.parseInt(parts[4]);
-                double price = Double.parseDouble(parts[5]);
-                boolean rented = Boolean.parseBoolean(parts[6]);
-
-                switch (type) {
-                    case "CAR":
-                        addIfUniqueId(new Car(id, brand, model, year, price, rented));
-                        break;
-
-                    case "MOTORCYCLE":
-                        LicenseCategory category = LicenseCategory.valueOf(parts[7]);
-                        addIfUniqueId(new Motorcycle(id, brand, model, year, price, rented, category));
-                        break;
-
-                    default:
-                        System.out.println("Nieznany typ pojazdu w pliku: " + type);
-                }
-            }
-        } catch (IOException | NumberFormatException e) {
-            System.out.println("Błąd podczas wczytywania pliku: " + e.getMessage());
         }
     }
 }

@@ -1,12 +1,12 @@
 package org.example.carrent;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface IVehicleRepository {
-    boolean rentVehicle(String id);
-    boolean returnVehicle(String id);
+    Optional<Vehicle> findById(String id);
     List<Vehicle> getVehicles();
     boolean add(Vehicle vehicle);
     boolean remove(String id);
-    Vehicle getVehicle(String id);
+    boolean update(Vehicle vehicle);
 }
