@@ -85,7 +85,7 @@ public class VehicleRepositoryImpl implements IVehicleRepository {
         return false;
     }
 
-    // Gson не знає чи це Car чи Motorcycle — цей клас допомагає
+
     private static class VehicleDeserializer implements JsonDeserializer<Vehicle> {
         @Override
         public Vehicle deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext ctx)
