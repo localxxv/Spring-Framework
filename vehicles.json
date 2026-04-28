@@ -1,1 +1,56 @@
-[{"id":"C1","brand":"Toyota","model":"Corolla","year":2020,"price":150.0,"rented":true},{"id":"C2","brand":"Skoda","model":"Octavia","year":2021,"price":180.0,"rented":false},{"category":"A","id":"M1","brand":"Yamaha","model":"MT-07","year":2022,"price":120.0,"rented":false}]
+[
+  {
+    "id": "C1",
+    "category": "Car",
+    "brand": "Toyota",
+    "model": "Corolla",
+    "year": 2020,
+    "plate": "LU12345",
+    "price": 150.0,
+    "rented": false,
+    "attributes": {
+      "fuelType": "petrol"
+    }
+  },
+  {
+    "id": "C2",
+    "category": "Car",
+    "brand": "Skoda",
+    "model": "Octavia",
+    "year": 2021,
+    "plate": "LU67890",
+    "price": 180.0,
+    "rented": false,
+    "attributes": {
+      "fuelType": "diesel"
+    }
+  },
+  {
+    "id": "M1",
+    "category": "Motorcycle",
+    "brand": "Yamaha",
+    "model": "MT-07",
+    "year": 2022,
+    "plate": "LU54321",
+    "price": 120.0,
+    "rented": false,
+    "attributes": {
+      "licence": "A",
+      "fuelType": "petrol"
+    }
+  },
+  {
+    "id": "M2",
+    "category": "Motorcycle",
+    "brand": "Honda",
+    "model": "CB500",
+    "year": 2019,
+    "plate": "LU11122",
+    "price": 100.0,
+    "rented": false,
+    "attributes": {
+      "licence": "A2",
+      "fuelType": "petrol"
+    }
+  }
+]

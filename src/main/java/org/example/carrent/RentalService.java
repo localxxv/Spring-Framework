@@ -59,4 +59,10 @@ public class RentalService {
     public boolean hasActiveRental(String userLogin) {
         return rentalRepository.findActiveByUserLogin(userLogin).isPresent();
     }
+
+    public boolean vehicleHasActiveRental(String vehicleId) {
+        return rentalRepository.getAll()
+                .stream()
+                .anyMatch(r -> r.getVehicleId().equals(vehicleId) && r.isActive());
+    }
 }

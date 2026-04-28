@@ -6,13 +6,35 @@ public class Main {
         IUserRepository userRepository = new UserRepository("users.json");
         IRentalRepository rentalRepository = new RentalRepository("rentals.json");
 
-        if (vehicleRepository.getVehicles().isEmpty()) {
-            vehicleRepository.add(new Car("C1", "Toyota", "Corolla", 2020, 150.0, false));
-            vehicleRepository.add(new Car("C2", "Skoda", "Octavia", 2021, 180.0, false));
-            vehicleRepository.add(new Motorcycle("M1", "Yamaha", "MT-07", 2022, 120.0, false, LicenseCategory.A));
-        }
+        VehicleCategoryConfigRepository categoryConfigRepository =
+                new VehicleCategoryConfigJsonRepository("categories.json");
 
-        ConsoleUI ui = new ConsoleUI(vehicleRepository, userRepository, rentalRepository);
+        VehicleCategoryConfigService categoryConfigService =
+                new VehicleCategoryConfigService(categoryConfigRepository);
+
+        VehicleValidator vehicleValidator =
+                new VehicleValidator(categoryConfigService);
+
+        AuthService authService =
+                new AuthService(userRepository);
+
+        RentalService rentalService =
+                new RentalService(vehicleRepository, rentalRepository);
+
+        VehicleService vehicleService =
+                new VehicleService(vehicleRepository, rentalRepository, vehicleValidator);
+
+        UserService userService =
+                new UserService(userRepository, rentalService);
+
+        ConsoleUI ui = new ConsoleUI(
+                authService,
+                vehicleService,
+                rentalService,
+                userService,
+                categoryConfigService
+        );
+
         ui.start();
     }
 }
