@@ -1,7 +1,9 @@
-package org.example.carrent;
+package org.example.carrent.repositories.impl;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import org.example.carrent.models.VehicleCategoryConfig;
+import org.example.carrent.repositories.VehicleCategoryConfigRepository;
 
 import java.io.File;
 import java.io.FileReader;

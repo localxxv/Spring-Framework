@@ -1,5 +1,8 @@
 package org.example.carrent;
 
+import org.example.carrent.models.*;
+import org.example.carrent.services.*;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;

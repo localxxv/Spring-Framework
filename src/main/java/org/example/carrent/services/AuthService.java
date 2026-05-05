@@ -1,5 +1,9 @@
-package org.example.carrent;
+package org.example.carrent.services;
 
+import org.example.carrent.models.RegisterResult;
+import org.example.carrent.models.Role;
+import org.example.carrent.models.User;
+import org.example.carrent.repositories.IUserRepository;
 import org.mindrot.jbcrypt.BCrypt;
 
 import java.util.Optional;

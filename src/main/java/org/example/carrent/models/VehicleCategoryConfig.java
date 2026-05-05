@@ -1,4 +1,4 @@
-package org.example.carrent;
+package org.example.carrent.models;
 
 import java.util.Collections;
 import java.util.HashMap;

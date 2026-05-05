@@ -1,7 +1,11 @@
-package org.example.carrent;
+package org.example.carrent.repositories.impl;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import org.example.carrent.services.AuthService;
+import org.example.carrent.models.Role;
+import org.example.carrent.models.User;
+import org.example.carrent.repositories.IUserRepository;
 
 import java.io.*;
 import java.lang.reflect.Type;

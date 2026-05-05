@@ -1,4 +1,7 @@
-package org.example.carrent;
+package org.example.carrent.services;
+
+import org.example.carrent.models.User;
+import org.example.carrent.repositories.IUserRepository;
 
 import java.util.List;
 

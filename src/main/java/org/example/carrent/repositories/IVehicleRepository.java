@@ -1,4 +1,6 @@
-package org.example.carrent;
+package org.example.carrent.repositories;
+
+import org.example.carrent.models.Vehicle;
 
 import java.util.List;
 import java.util.Optional;

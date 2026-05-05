@@ -1,4 +1,7 @@
-package org.example.carrent;
+package org.example.carrent.services;
+
+import org.example.carrent.models.Vehicle;
+import org.example.carrent.models.VehicleCategoryConfig;
 
 import java.util.Map;
 
