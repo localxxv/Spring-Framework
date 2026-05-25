@@ -16,10 +16,10 @@ public class RentalJdbcRepository implements IRentalRepository {
 
     @Override
     public void add(Rental rental) {
-        String sql = "INSERT INTO rental (id, vehicle_id, user_login, rent_date, return_date) " +
+        String sql = "INSERT INTO rental (id, vehicle_id, user_id, rent_date, return_date) " +
                 "VALUES (?, ?, ?, ?, ?) " +
                 "ON CONFLICT (id) DO UPDATE SET vehicle_id = EXCLUDED.vehicle_id, " +
-                "user_login = EXCLUDED.user_login, rent_date = EXCLUDED.rent_date, " +
+                "user_id = EXCLUDED.user_id, rent_date = EXCLUDED.rent_date, " +
                 "return_date = EXCLUDED.return_date";
         try (PreparedStatement ps = conn().prepareStatement(sql)) {
             ps.setString(1, rental.getId());
@@ -35,7 +35,7 @@ public class RentalJdbcRepository implements IRentalRepository {
 
     @Override
     public Optional<Rental> findActiveByUserLogin(String userLogin) {
-        String sql = "SELECT * FROM rental WHERE user_login = ? AND return_date IS NULL";
+        String sql = "SELECT * FROM rental WHERE user_id = ? AND return_date IS NULL";
         try (PreparedStatement ps = conn().prepareStatement(sql)) {
             ps.setString(1, userLogin);
             ResultSet rs = ps.executeQuery();
@@ -75,7 +75,7 @@ public class RentalJdbcRepository implements IRentalRepository {
     private Rental mapRow(ResultSet rs) throws SQLException {
         Rental rental = new Rental(
                 rs.getString("id"),
-                rs.getString("user_login"),
+                rs.getString("user_id"),
                 rs.getString("vehicle_id"),
                 rs.getString("rent_date")
         );

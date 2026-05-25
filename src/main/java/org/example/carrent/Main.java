@@ -1,5 +1,6 @@
 package org.example.carrent;
 
+import org.example.carrent.hibernate.HibernateUtil;
 import org.example.carrent.repositories.IRentalRepository;
 import org.example.carrent.repositories.IUserRepository;
 import org.example.carrent.repositories.IVehicleRepository;
@@ -9,19 +10,33 @@ import org.example.carrent.services.*;
 
 public class Main {
     public static void main(String[] args) {
-        boolean useJdbc = args.length > 0 && args[0].equalsIgnoreCase("jdbc");
+        String mode = args.length > 0 ? args[0].toLowerCase() : "hibernate";
 
         IVehicleRepository vehicleRepository;
         IUserRepository userRepository;
         IRentalRepository rentalRepository;
 
-        if (useJdbc) {
+        if (mode.equals("hibernate")) {
+            System.out.println("Używam repozytoriów Hibernate (PostgreSQL)");
+
+            vehicleRepository = new VehicleHibernateRepository();
+            userRepository = new UserHibernateRepository();
+            rentalRepository = new RentalHibernateRepository();
+
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                HibernateUtil.getSessionFactory().close();
+            }));
+
+        } else if (mode.equals("jdbc")) {
             System.out.println("Używam repozytoriów JDBC (PostgreSQL)");
+
             vehicleRepository = new VehicleJdbcRepository();
             userRepository = new UserJdbcRepository();
             rentalRepository = new RentalJdbcRepository();
+
         } else {
             System.out.println("Używam repozytoriów JSON");
+
             vehicleRepository = new VehicleRepositoryImpl("vehicles.json");
             userRepository = new UserRepository("users.json");
             rentalRepository = new RentalRepository("rentals.json");
@@ -33,8 +48,7 @@ public class Main {
         VehicleCategoryConfigService categoryConfigService =
                 new VehicleCategoryConfigService(categoryConfigRepository);
 
-        VehicleValidator vehicleValidator =
-                new VehicleValidator(categoryConfigService);
+        VehicleValidator vehicleValidator = new VehicleValidator(categoryConfigService);
 
         AuthService authService = new AuthService(userRepository);
         RentalService rentalService = new RentalService(vehicleRepository, rentalRepository);
