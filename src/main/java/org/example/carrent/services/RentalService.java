@@ -6,6 +6,7 @@ import org.example.carrent.repositories.IRentalRepository;
 import org.example.carrent.repositories.IVehicleRepository;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,34 +19,53 @@ public class RentalService {
         this.rentalRepository = rentalRepository;
     }
 
-    public boolean rent(String userLogin, String vehicleId) {
+    public List<Rental> getAllRentals() {
+        return rentalRepository.getAll();
+    }
+
+    public List<Rental> getRentalsByUser(String userLogin) {
+        return rentalRepository.getAll()
+                .stream()
+                .filter(r -> r.getUserLogin().equals(userLogin))
+                .toList();
+    }
+
+    public Rental rentVehicle(String userLogin, String vehicleId) {
         if (rentalRepository.findActiveByUserLogin(userLogin).isPresent()) {
-            return false;
+            throw new IllegalStateException("Użytkownik ma już aktywne wypożyczenie.");
         }
 
         Optional<Vehicle> vehicle = vehicleRepository.findById(vehicleId);
-        if (vehicle.isEmpty() || vehicle.get().isRented()) {
-            return false;
+
+        if (vehicle.isEmpty()) {
+            throw new IllegalArgumentException("Nie znaleziono pojazdu.");
+        }
+
+        if (vehicle.get().isRented()) {
+            throw new IllegalStateException("Pojazd jest już wypożyczony.");
         }
 
         Vehicle rentedVehicle = vehicle.get();
         rentedVehicle.setRented(true);
         vehicleRepository.update(rentedVehicle);
 
-        rentalRepository.add(new Rental(
+        Rental rental = new Rental(
                 UUID.randomUUID().toString(),
                 userLogin,
                 vehicleId,
                 LocalDate.now().toString()
-        ));
+        );
 
-        return true;
+        rentalRepository.add(rental);
+
+        return rental;
     }
 
-    public boolean returnVehicle(String userLogin) {
+    public Rental returnVehicleWithInfo(String userLogin) {
         Optional<Rental> rental = rentalRepository.findActiveByUserLogin(userLogin);
+
         if (rental.isEmpty()) {
-            return false;
+            throw new IllegalStateException("Użytkownik nie ma aktywnego wypożyczenia.");
         }
 
         Rental activeRental = rental.get();
@@ -58,7 +78,25 @@ public class RentalService {
                     vehicleRepository.update(v);
                 });
 
-        return true;
+        return activeRental;
+    }
+
+    public boolean rent(String userLogin, String vehicleId) {
+        try {
+            rentVehicle(userLogin, vehicleId);
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    public boolean returnVehicle(String userLogin) {
+        try {
+            returnVehicleWithInfo(userLogin);
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
     }
 
     public boolean hasActiveRental(String userLogin) {

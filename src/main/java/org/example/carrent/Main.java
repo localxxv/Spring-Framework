@@ -7,62 +7,78 @@ import org.example.carrent.repositories.IVehicleRepository;
 import org.example.carrent.repositories.VehicleCategoryConfigRepository;
 import org.example.carrent.repositories.impl.*;
 import org.example.carrent.services.*;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
 
+@SpringBootApplication
 public class Main {
+
     public static void main(String[] args) {
-        String mode = args.length > 0 ? args[0].toLowerCase() : "hibernate";
+        SpringApplication.run(Main.class, args);
+    }
 
-        IVehicleRepository vehicleRepository;
-        IUserRepository userRepository;
-        IRentalRepository rentalRepository;
+    @Bean
+    public IVehicleRepository vehicleRepository() {
+        return new VehicleHibernateRepository();
+    }
 
-        if (mode.equals("hibernate")) {
-            System.out.println("Używam repozytoriów Hibernate (PostgreSQL)");
+    @Bean
+    public IUserRepository userRepository() {
+        return new UserHibernateRepository();
+    }
 
-            vehicleRepository = new VehicleHibernateRepository();
-            userRepository = new UserHibernateRepository();
-            rentalRepository = new RentalHibernateRepository();
+    @Bean
+    public IRentalRepository rentalRepository() {
+        return new RentalHibernateRepository();
+    }
 
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                HibernateUtil.getSessionFactory().close();
-            }));
+    @Bean
+    public VehicleCategoryConfigRepository categoryConfigRepository() {
+        return new VehicleCategoryConfigJsonRepository("categories.json");
+    }
 
-        } else if (mode.equals("jdbc")) {
-            System.out.println("Używam repozytoriów JDBC (PostgreSQL)");
+    @Bean
+    public VehicleCategoryConfigService categoryConfigService(
+            VehicleCategoryConfigRepository categoryConfigRepository
+    ) {
+        return new VehicleCategoryConfigService(categoryConfigRepository);
+    }
 
-            vehicleRepository = new VehicleJdbcRepository();
-            userRepository = new UserJdbcRepository();
-            rentalRepository = new RentalJdbcRepository();
+    @Bean
+    public VehicleValidator vehicleValidator(
+            VehicleCategoryConfigService categoryConfigService
+    ) {
+        return new VehicleValidator(categoryConfigService);
+    }
 
-        } else {
-            System.out.println("Używam repozytoriów JSON");
+    @Bean
+    public AuthService authService(IUserRepository userRepository) {
+        return new AuthService(userRepository);
+    }
 
-            vehicleRepository = new VehicleRepositoryImpl("vehicles.json");
-            userRepository = new UserRepository("users.json");
-            rentalRepository = new RentalRepository("rentals.json");
-        }
+    @Bean
+    public RentalService rentalService(
+            IVehicleRepository vehicleRepository,
+            IRentalRepository rentalRepository
+    ) {
+        return new RentalService(vehicleRepository, rentalRepository);
+    }
 
-        VehicleCategoryConfigRepository categoryConfigRepository =
-                new VehicleCategoryConfigJsonRepository("categories.json");
+    @Bean
+    public VehicleService vehicleService(
+            IVehicleRepository vehicleRepository,
+            IRentalRepository rentalRepository,
+            VehicleValidator vehicleValidator
+    ) {
+        return new VehicleService(vehicleRepository, rentalRepository, vehicleValidator);
+    }
 
-        VehicleCategoryConfigService categoryConfigService =
-                new VehicleCategoryConfigService(categoryConfigRepository);
-
-        VehicleValidator vehicleValidator = new VehicleValidator(categoryConfigService);
-
-        AuthService authService = new AuthService(userRepository);
-        RentalService rentalService = new RentalService(vehicleRepository, rentalRepository);
-        VehicleService vehicleService = new VehicleService(vehicleRepository, rentalRepository, vehicleValidator);
-        UserService userService = new UserService(userRepository, rentalService);
-
-        ConsoleUI ui = new ConsoleUI(
-                authService,
-                vehicleService,
-                rentalService,
-                userService,
-                categoryConfigService
-        );
-
-        ui.start();
+    @Bean
+    public UserService userService(
+            IUserRepository userRepository,
+            RentalService rentalService
+    ) {
+        return new UserService(userRepository, rentalService);
     }
 }
