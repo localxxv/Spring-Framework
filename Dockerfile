@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY pom.xml .
 COPY src ./src
-COPY *.json ./
+COPY categories.json ./categories.json
 
 RUN mvn clean package -DskipTests
 
@@ -13,7 +13,9 @@ FROM eclipse-temurin:17-jre
 WORKDIR /app
 
 COPY --from=build /app/target/*.jar app.jar
-COPY --from=build /app/*.json ./
+COPY --from=build /app/categories.json ./categories.json
+
+EXPOSE 8080
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
-CMD ["json"]
+CMD ["hibernate"]

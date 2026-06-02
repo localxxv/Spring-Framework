@@ -90,6 +90,18 @@ public class RentalService {
         }
     }
 
+
+    public List<Rental> findAllRentals() {
+        return rentalRepository.getAll();
+    }
+
+    public List<Rental> findUserRentals(String userLogin) {
+        return rentalRepository.getAll()
+                .stream()
+                .filter(r -> r.getUserLogin().equals(userLogin))
+                .toList();
+    }
+
     public boolean returnVehicle(String userLogin) {
         try {
             returnVehicleWithInfo(userLogin);

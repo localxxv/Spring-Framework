@@ -2,6 +2,8 @@ package org.example.carrent.controllers;
 
 import org.example.carrent.models.Rental;
 import org.example.carrent.services.RentalService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,24 +20,33 @@ public class RentalController {
 
     @GetMapping
     public List<Rental> list() {
-        return rentalService.getAllRentals();
+        return rentalService.findAllRentals();
     }
 
-    @GetMapping("/users/{userId}")
-    public List<Rental> userRentals(@PathVariable String userId) {
-        return rentalService.getRentalsByUser(userId);
+    @GetMapping("/me")
+    public List<Rental> myRentals(Authentication authentication) {
+        return rentalService.findUserRentals(authentication.getName());
     }
 
-    @PostMapping("/users/{userId}/rent/{vehicleId}")
-    public Rental rent(
-            @PathVariable String userId,
-            @PathVariable String vehicleId
-    ) {
-        return rentalService.rentVehicle(userId, vehicleId);
+    @PostMapping("/rent/{vehicleId}")
+    public ResponseEntity<String> rent(@PathVariable String vehicleId, Authentication authentication) {
+        boolean result = rentalService.rent(authentication.getName(), vehicleId);
+
+        if (result) {
+            return ResponseEntity.ok("Pojazd wypożyczony.");
+        }
+
+        return ResponseEntity.badRequest().body("Nie udało się wypożyczyć pojazdu.");
     }
 
-    @PostMapping("/users/{userId}/return")
-    public Rental returnVehicle(@PathVariable String userId) {
-        return rentalService.returnVehicleWithInfo(userId);
+    @PostMapping("/return")
+    public ResponseEntity<String> returnVehicle(Authentication authentication) {
+        boolean result = rentalService.returnVehicle(authentication.getName());
+
+        if (result) {
+            return ResponseEntity.ok("Pojazd zwrócony.");
+        }
+
+        return ResponseEntity.badRequest().body("Brak aktywnego wypożyczenia.");
     }
 }
