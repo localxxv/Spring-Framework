@@ -1,132 +1,82 @@
 package org.example.carrent.repositories.impl;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.example.carrent.entities.UserEntity;
-import org.example.carrent.hibernate.HibernateUtil;
 import org.example.carrent.models.Role;
 import org.example.carrent.models.User;
 import org.example.carrent.repositories.IUserRepository;
-import org.hibernate.Session;
-import org.hibernate.Transaction;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 @Profile("jpa")
+@Transactional
 public class UserHibernateRepository implements IUserRepository {
 
-    public UserHibernateRepository() {
-    }
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<User> findByLogin(String login) {
-        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-            UserEntity entity = session.get(UserEntity.class, login);
-            return Optional.ofNullable(entity).map(this::toModel);
-        }
+        UserEntity entity = entityManager.find(UserEntity.class, login);
+        return Optional.ofNullable(entity).map(this::toModel);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<User> getUsers() {
-        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-            return session.createQuery("FROM UserEntity", UserEntity.class)
-                    .list()
-                    .stream()
-                    .map(this::toModel)
-                    .toList();
-        }
+        return entityManager
+                .createQuery("FROM UserEntity", UserEntity.class)
+                .getResultList()
+                .stream()
+                .map(this::toModel)
+                .toList();
     }
 
     @Override
     public void add(User user) {
-        Transaction tx = null;
-
-        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-            tx = session.beginTransaction();
-
-            UserEntity existing = session.get(UserEntity.class, user.getLogin());
-
-            if (existing != null) {
-                existing.setPasswordHash(user.getPasswordHash());
-                existing.setRole(user.getRole().name());
-                session.merge(existing);
-            } else {
-                UserEntity entity = new UserEntity(
-                        user.getLogin(),
-                        user.getPasswordHash(),
-                        user.getRole().name()
-                );
-
-                session.persist(entity);
-            }
-
-            tx.commit();
-
-        } catch (RuntimeException e) {
-            if (tx != null && tx.isActive()) {
-                tx.rollback();
-            }
-            throw e;
-        }
+        entityManager.merge(toEntity(user));
     }
 
     @Override
     public boolean remove(String login) {
-        Transaction tx = null;
+        UserEntity entity = entityManager.find(UserEntity.class, login);
 
-        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-            tx = session.beginTransaction();
-
-            UserEntity entity = session.get(UserEntity.class, login);
-
-            if (entity == null) {
-                tx.rollback();
-                return false;
-            }
-
-            session.remove(entity);
-
-            tx.commit();
-            return true;
-
-        } catch (RuntimeException e) {
-            if (tx != null && tx.isActive()) {
-                tx.rollback();
-            }
-            throw e;
+        if (entity == null) {
+            return false;
         }
+
+        entityManager.remove(entity);
+        return true;
     }
 
     @Override
     public boolean update(User user) {
-        Transaction tx = null;
+        UserEntity existing = entityManager.find(UserEntity.class, user.getLogin());
 
-        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-            tx = session.beginTransaction();
-
-            UserEntity entity = session.get(UserEntity.class, user.getLogin());
-
-            if (entity == null) {
-                tx.rollback();
-                return false;
-            }
-
-            entity.setPasswordHash(user.getPasswordHash());
-            entity.setRole(user.getRole().name());
-
-            session.merge(entity);
-
-            tx.commit();
-            return true;
-
-        } catch (RuntimeException e) {
-            if (tx != null && tx.isActive()) {
-                tx.rollback();
-            }
-            throw e;
+        if (existing == null) {
+            return false;
         }
+
+        existing.setPasswordHash(user.getPasswordHash());
+        existing.setRole(user.getRole().name());
+
+        entityManager.merge(existing);
+        return true;
+    }
+
+    private UserEntity toEntity(User user) {
+        return new UserEntity(
+                user.getLogin(),
+                user.getPasswordHash(),
+                user.getRole().name()
+        );
     }
 
     private User toModel(UserEntity entity) {
