@@ -8,10 +8,14 @@ import org.example.carrent.models.Rental;
 import org.example.carrent.repositories.IRentalRepository;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
+@Repository
+@Profile("jpa")
 public class RentalHibernateRepository implements IRentalRepository {
 
     public RentalHibernateRepository() {

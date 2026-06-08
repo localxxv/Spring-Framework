@@ -1,70 +1,83 @@
 package org.example.carrent.services;
 
 import org.example.carrent.models.Vehicle;
-import org.example.carrent.repositories.IRentalRepository;
 import org.example.carrent.repositories.IVehicleRepository;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
+@Service
 public class VehicleService {
+
     private final IVehicleRepository vehicleRepository;
-    private final IRentalRepository rentalRepository;
-    private final VehicleValidator validator;
 
-    public VehicleService(IVehicleRepository vehicleRepository,
-                          IRentalRepository rentalRepository,
-                          VehicleValidator validator) {
+    public VehicleService(IVehicleRepository vehicleRepository) {
         this.vehicleRepository = vehicleRepository;
-        this.rentalRepository = rentalRepository;
-        this.validator = validator;
     }
 
-    public Vehicle addVehicle(Vehicle vehicle) {
-        validator.validate(vehicle);
-
-        if (!vehicleRepository.add(vehicle)) {
-            throw new IllegalArgumentException("Pojazd o takim ID już istnieje.");
-        }
-
-        return vehicle;
-    }
-
-    public void removeVehicle(String id) {
-        Vehicle vehicle = vehicleRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Nie znaleziono pojazdu."));
-
-        if (vehicle.isRented() || vehicleHasActiveRental(id)) {
-            throw new IllegalStateException("Nie można usunąć pojazdu, bo jest wypożyczony.");
-        }
-
-        vehicleRepository.remove(id);
+    public List<Vehicle> getVehicles() {
+        return vehicleRepository.getVehicles();
     }
 
     public List<Vehicle> findAllVehicles() {
         return vehicleRepository.getVehicles();
     }
 
+    public List<Vehicle> findAll() {
+        return vehicleRepository.getVehicles();
+    }
+
+    public List<Vehicle> list(boolean available) {
+        if (available) {
+            return findAvailableVehicles();
+        }
+        return findAllVehicles();
+    }
+
     public List<Vehicle> findAvailableVehicles() {
         return vehicleRepository.getVehicles()
                 .stream()
-                .filter(v -> !v.isRented())
-                .toList();
+                .filter(vehicle -> !vehicle.isRented())
+                .collect(Collectors.toList());
     }
 
     public Vehicle findById(String id) {
         return vehicleRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Nie znaleziono pojazdu."));
+                .orElseThrow(() -> new RuntimeException("Nie znaleziono pojazdu: " + id));
     }
 
-    public boolean isVehicleRented(String id) {
-        return vehicleRepository.findById(id)
-                .map(Vehicle::isRented)
-                .orElse(false);
+    public Vehicle get(String id) {
+        return findById(id);
     }
 
-    public boolean vehicleHasActiveRental(String vehicleId) {
-        return rentalRepository.getAll()
-                .stream()
-                .anyMatch(r -> r.getVehicleId().equals(vehicleId) && r.isActive());
+    public Vehicle getVehicle(String id) {
+        return findById(id);
+    }
+
+    public Vehicle addVehicle(Vehicle vehicle) {
+        boolean added = vehicleRepository.add(vehicle);
+
+        if (!added) {
+            throw new RuntimeException("Nie udało się dodać pojazdu.");
+        }
+
+        return vehicle;
+    }
+
+    public Vehicle create(Vehicle vehicle) {
+        return addVehicle(vehicle);
+    }
+
+    public boolean removeVehicle(String id) {
+        return vehicleRepository.remove(id);
+    }
+
+    public boolean delete(String id) {
+        return vehicleRepository.remove(id);
+    }
+
+    public boolean updateVehicle(Vehicle vehicle) {
+        return vehicleRepository.update(vehicle);
     }
 }

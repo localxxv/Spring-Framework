@@ -23,30 +23,37 @@ public class RentalController {
         return rentalService.findAllRentals();
     }
 
+    @GetMapping("/users/{userId}")
+    public List<Rental> userRentals(@PathVariable String userId) {
+        return rentalService.findUserRentals(userId);
+    }
+
     @GetMapping("/me")
     public List<Rental> myRentals(Authentication authentication) {
         return rentalService.findUserRentals(authentication.getName());
     }
 
+    @PostMapping("/users/{userId}/rent/{vehicleId}")
+    public Rental rentOldEndpoint(@PathVariable String userId,
+                                  @PathVariable String vehicleId) {
+        return rentalService.rentVehicle(userId, vehicleId);
+    }
+
+    @PostMapping("/users/{userId}/return")
+    public Rental returnVehicleOldEndpoint(@PathVariable String userId) {
+        return rentalService.returnVehicle(userId);
+    }
+
     @PostMapping("/rent/{vehicleId}")
-    public ResponseEntity<String> rent(@PathVariable String vehicleId, Authentication authentication) {
-        boolean result = rentalService.rent(authentication.getName(), vehicleId);
-
-        if (result) {
-            return ResponseEntity.ok("Pojazd wypożyczony.");
-        }
-
-        return ResponseEntity.badRequest().body("Nie udało się wypożyczyć pojazdu.");
+    public ResponseEntity<?> rent(@PathVariable String vehicleId,
+                                  Authentication authentication) {
+        Rental rental = rentalService.rentVehicle(authentication.getName(), vehicleId);
+        return ResponseEntity.ok(rental);
     }
 
     @PostMapping("/return")
-    public ResponseEntity<String> returnVehicle(Authentication authentication) {
-        boolean result = rentalService.returnVehicle(authentication.getName());
-
-        if (result) {
-            return ResponseEntity.ok("Pojazd zwrócony.");
-        }
-
-        return ResponseEntity.badRequest().body("Brak aktywnego wypożyczenia.");
+    public ResponseEntity<?> returnVehicle(Authentication authentication) {
+        Rental rental = rentalService.returnVehicle(authentication.getName());
+        return ResponseEntity.ok(rental);
     }
 }
