@@ -7,11 +7,19 @@ import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 
 public class HibernateUtil {
+
     private static final SessionFactory sessionFactory;
 
     static {
         String url = System.getenv("DATABASE_URL");
-        if (url == null) throw new RuntimeException("Brak zmiennej DATABASE_URL!");
+
+        if (url == null || url.isBlank()) {
+            url = System.getenv("DB_URL");
+        }
+
+        if (url == null || url.isBlank()) {
+            throw new RuntimeException("Brak DATABASE_URL ani DB_URL!");
+        }
 
         sessionFactory = new Configuration()
                 .setProperty("hibernate.connection.url", url)
