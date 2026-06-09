@@ -7,10 +7,7 @@ import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.stereotype.Repository;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -45,11 +42,9 @@ public class RentalJdbcRepository implements IRentalRepository {
             ps.setString(3, rental.getUserLogin());
             ps.setString(4, rental.getStartDate());
             ps.setString(5, rental.getEndDate());
-
             ps.executeUpdate();
-
         } catch (SQLException e) {
-            throw new RuntimeException("Błąd add rental", e);
+            throw new RuntimeException("Błąd add rental: " + e.getMessage(), e);
         } finally {
             DataSourceUtils.releaseConnection(connection, dataSource);
         }
@@ -57,7 +52,13 @@ public class RentalJdbcRepository implements IRentalRepository {
 
     @Override
     public Optional<Rental> findActiveByUserLogin(String userLogin) {
-        String sql = "SELECT * FROM rental WHERE user_id = ? AND return_date IS NULL";
+        String sql = """
+                SELECT id, user_id, vehicle_id, rent_date, return_date
+                FROM rental
+                WHERE user_id = ?
+                  AND return_date IS NULL
+                LIMIT 1
+                """;
 
         Connection connection = DataSourceUtils.getConnection(dataSource);
 
@@ -69,9 +70,8 @@ public class RentalJdbcRepository implements IRentalRepository {
                     return Optional.of(mapRow(rs));
                 }
             }
-
         } catch (SQLException e) {
-            throw new RuntimeException("Błąd findActiveByUserLogin", e);
+            throw new RuntimeException("Błąd findActiveByUserLogin: " + e.getMessage(), e);
         } finally {
             DataSourceUtils.releaseConnection(connection, dataSource);
         }
@@ -81,8 +81,13 @@ public class RentalJdbcRepository implements IRentalRepository {
 
     @Override
     public List<Rental> getAll() {
-        List<Rental> list = new ArrayList<>();
-        String sql = "SELECT * FROM rental";
+        List<Rental> rentals = new ArrayList<>();
+
+        String sql = """
+                SELECT id, user_id, vehicle_id, rent_date, return_date
+                FROM rental
+                ORDER BY rent_date DESC
+                """;
 
         Connection connection = DataSourceUtils.getConnection(dataSource);
 
@@ -90,21 +95,25 @@ public class RentalJdbcRepository implements IRentalRepository {
              ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
-                list.add(mapRow(rs));
+                rentals.add(mapRow(rs));
             }
 
         } catch (SQLException e) {
-            throw new RuntimeException("Błąd getAll rentals", e);
+            throw new RuntimeException("Błąd getAll rentals: " + e.getMessage(), e);
         } finally {
             DataSourceUtils.releaseConnection(connection, dataSource);
         }
 
-        return list;
+        return rentals;
     }
 
     @Override
     public boolean update(Rental rental) {
-        String sql = "UPDATE rental SET return_date = ? WHERE id = ?";
+        String sql = """
+                UPDATE rental
+                SET return_date = ?
+                WHERE id = ?
+                """;
 
         Connection connection = DataSourceUtils.getConnection(dataSource);
 
@@ -113,9 +122,8 @@ public class RentalJdbcRepository implements IRentalRepository {
             ps.setString(2, rental.getId());
 
             return ps.executeUpdate() > 0;
-
         } catch (SQLException e) {
-            throw new RuntimeException("Błąd update rental", e);
+            throw new RuntimeException("Błąd update rental: " + e.getMessage(), e);
         } finally {
             DataSourceUtils.releaseConnection(connection, dataSource);
         }

@@ -6,6 +6,7 @@ import org.example.carrent.repositories.IRentalRepository;
 import org.example.carrent.repositories.IUserRepository;
 import org.example.carrent.repositories.IVehicleRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -54,6 +55,7 @@ public class RentalService {
         return rentalRepository.findActiveByUserLogin(userLogin).isPresent();
     }
 
+    @Transactional
     public Rental rentVehicle(String userLogin, String vehicleId) {
         if (userRepository.findByLogin(userLogin).isEmpty()) {
             throw new RuntimeException("Nie znaleziono użytkownika: " + userLogin);
@@ -90,6 +92,7 @@ public class RentalService {
         return true;
     }
 
+    @Transactional
     public Rental returnVehicle(String userLogin) {
         Rental rental = rentalRepository.findActiveByUserLogin(userLogin)
                 .orElseThrow(() -> new RuntimeException("Brak aktywnego wypożyczenia."));
