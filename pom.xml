@@ -25,25 +25,25 @@
 
     <dependencies>
 
-        <!-- Spring Boot REST API -->
+        <!-- REST API -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- Spring JDBC profile -->
+        <!-- JDBC profile -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-jdbc</artifactId>
         </dependency>
 
-        <!-- Spring JPA / Hibernate profile -->
+        <!-- JPA / Hibernate profile -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
-        <!-- Spring Security -->
+        <!-- Security -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
@@ -70,28 +70,28 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Hibernate native API, zostawiamy dla zadania 7 -->
+        <!-- Native Hibernate API for task 7 -->
         <dependency>
             <groupId>org.hibernate.orm</groupId>
             <artifactId>hibernate-core</artifactId>
             <version>6.4.4.Final</version>
         </dependency>
 
-        <!-- PostgreSQL Driver -->
+        <!-- PostgreSQL -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Gson for JSON files / attributes -->
+        <!-- Gson -->
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>2.10.1</version>
         </dependency>
 
-        <!-- BCrypt for password hashing -->
+        <!-- BCrypt password hashing -->
         <dependency>
             <groupId>org.mindrot</groupId>
             <artifactId>jbcrypt</artifactId>
@@ -111,7 +111,9 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
                 <configuration>
+                    <release>17</release>
                     <excludes>
                         <exclude>org/example/carrent/ConsoleUI.java</exclude>
                     </excludes>
