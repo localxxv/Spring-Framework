@@ -4,7 +4,8 @@ import org.example.carrent.models.Role;
 import org.example.carrent.models.User;
 import org.example.carrent.repositories.IUserRepository;
 import org.example.carrent.security.JwtService;
-import org.mindrot.jbcrypt.BCrypt;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -12,10 +13,14 @@ public class AuthService {
 
     private final IUserRepository userRepository;
     private final JwtService jwtService;
+    private final PasswordEncoder passwordEncoder;
 
-    public AuthService(IUserRepository userRepository, JwtService jwtService) {
+    public AuthService(IUserRepository userRepository,
+                       JwtService jwtService,
+                       PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.jwtService = jwtService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public String register(String login, String password) {
@@ -33,7 +38,7 @@ public class AuthService {
 
         User user = new User(
                 login,
-                hashPassword(password),
+                passwordEncoder.encode(password),
                 Role.USER
         );
 
@@ -46,7 +51,7 @@ public class AuthService {
         User user = userRepository.findByLogin(login)
                 .orElseThrow(() -> new RuntimeException("Niepoprawny login lub hasło."));
 
-        if (!checkPassword(password, user.getPasswordHash())) {
+        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
             throw new RuntimeException("Niepoprawny login lub hasło.");
         }
 
@@ -54,10 +59,6 @@ public class AuthService {
     }
 
     public static String hashPassword(String password) {
-        return BCrypt.hashpw(password, BCrypt.gensalt());
-    }
-
-    public static boolean checkPassword(String password, String hash) {
-        return BCrypt.checkpw(password, hash);
+        return new BCryptPasswordEncoder().encode(password);
     }
 }

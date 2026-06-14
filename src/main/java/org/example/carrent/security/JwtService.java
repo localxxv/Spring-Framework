@@ -5,6 +5,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.example.carrent.models.User;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
@@ -25,12 +26,32 @@ public class JwtService {
     }
 
     public String generateToken(User user) {
+        return generateToken(
+                user.getLogin(),
+                "ROLE_" + user.getRole().name()
+        );
+    }
+
+    public String generateToken(UserDetails userDetails) {
+        String role = userDetails.getAuthorities()
+                .stream()
+                .findFirst()
+                .map(Object::toString)
+                .orElse("ROLE_USER");
+
+        return generateToken(userDetails.getUsername(), role);
+    }
+
+    private String generateToken(String login, String role) {
         Date now = new Date();
         Date expiresAt = new Date(now.getTime() + expiration);
 
         return Jwts.builder()
-                .subject(user.getLogin())
-                .claim("role", user.getRole().name())
+                .header()
+                .type("JWT")
+                .and()
+                .subject(login)
+                .claim("role", role)
                 .issuedAt(now)
                 .expiration(expiresAt)
                 .signWith(getSigningKey())
@@ -41,10 +62,12 @@ public class JwtService {
         return extractClaims(token).getSubject();
     }
 
-    public boolean isTokenValid(String token) {
+    public boolean isTokenValid(String token, UserDetails userDetails) {
         try {
-            Claims claims = extractClaims(token);
-            return claims.getExpiration().after(new Date());
+            String login = extractLogin(token);
+
+            return login.equals(userDetails.getUsername())
+                    && extractClaims(token).getExpiration().after(new Date());
         } catch (Exception e) {
             return false;
         }

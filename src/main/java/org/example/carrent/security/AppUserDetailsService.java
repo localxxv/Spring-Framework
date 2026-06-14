@@ -1,6 +1,5 @@
 package org.example.carrent.security;
 
-import org.example.carrent.repositories.IUserRepository;
 import org.example.carrent.models.User;
 import org.example.carrent.services.UserService;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,17 +18,18 @@ public class AppUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String login) throws UsernameNotFoundException {
+        User user;
+
         try {
-            User user = userService.findByLogin(login);
-
-            return org.springframework.security.core.userdetails.User
-                    .withUsername(user.getLogin())
-                    .password(user.getPasswordHash())
-                    .authorities("ROLE_" + user.getRole().name())
-                    .build();
-
+            user = userService.findByLogin(login);
         } catch (Exception e) {
             throw new UsernameNotFoundException("Nie znaleziono użytkownika: " + login);
         }
+
+        return org.springframework.security.core.userdetails.User
+                .withUsername(user.getLogin())
+                .password(user.getPasswordHash())
+                .authorities("ROLE_" + user.getRole().name())
+                .build();
     }
 }

@@ -8,5 +8,5 @@ server:
   port: ${PORT:8080}
 
 jwt:
-  secret: ${JWT_SECRET:my-super-secret-jwt-key-my-super-secret-jwt-key-123456}
+  secret: ${JWT_SECRET:5Sy1-R-Zj7ajgcabswkEttARiS8Q4Vs9IhYCVAt1bQ0}
   expiration: ${JWT_EXPIRATION:3600000}
