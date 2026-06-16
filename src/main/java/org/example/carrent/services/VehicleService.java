@@ -1,8 +1,11 @@
 package org.example.carrent.services;
 
 import org.example.carrent.models.Vehicle;
+import org.example.carrent.repositories.IRentalRepository;
 import org.example.carrent.repositories.IVehicleRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -11,9 +14,12 @@ import java.util.stream.Collectors;
 public class VehicleService {
 
     private final IVehicleRepository vehicleRepository;
+    private final IRentalRepository rentalRepository;
 
-    public VehicleService(IVehicleRepository vehicleRepository) {
+    public VehicleService(IVehicleRepository vehicleRepository,
+                          IRentalRepository rentalRepository) {
         this.vehicleRepository = vehicleRepository;
+        this.rentalRepository = rentalRepository;
     }
 
     public List<Vehicle> getVehicles() {
@@ -44,7 +50,10 @@ public class VehicleService {
 
     public Vehicle findById(String id) {
         return vehicleRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Nie znaleziono pojazdu: " + id));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Nie znaleziono pojazdu: " + id
+                ));
     }
 
     public Vehicle get(String id) {
@@ -59,7 +68,10 @@ public class VehicleService {
         boolean added = vehicleRepository.add(vehicle);
 
         if (!added) {
-            throw new RuntimeException("Nie udało się dodać pojazdu.");
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Nie udało się dodać pojazdu."
+            );
         }
 
         return vehicle;
@@ -70,14 +82,41 @@ public class VehicleService {
     }
 
     public boolean removeVehicle(String id) {
+        checkCanDeleteVehicle(id);
         return vehicleRepository.remove(id);
     }
 
     public boolean delete(String id) {
+        checkCanDeleteVehicle(id);
         return vehicleRepository.remove(id);
     }
 
     public boolean updateVehicle(Vehicle vehicle) {
         return vehicleRepository.update(vehicle);
+    }
+
+    private void checkCanDeleteVehicle(String id) {
+        Vehicle vehicle = findById(id);
+
+        if (vehicle.isRented()) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Nie można usunąć pojazdu, który jest aktualnie wypożyczony."
+            );
+        }
+
+        boolean hasActiveRental = rentalRepository.getAll()
+                .stream()
+                .anyMatch(rental ->
+                        rental.getVehicleId().equals(id)
+                                && (rental.getEndDate() == null || rental.getEndDate().isBlank())
+                );
+
+        if (hasActiveRental) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Nie można usunąć pojazdu, ponieważ istnieje aktywne wypożyczenie."
+            );
+        }
     }
 }
