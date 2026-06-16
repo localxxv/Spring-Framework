@@ -46,46 +46,71 @@ public class VehicleHibernateRepository implements IVehicleRepository {
 
     @Override
     public boolean add(Vehicle vehicle) {
-        entityManager.merge(toEntity(vehicle));
-        return true;
+        int result = entityManager.createNativeQuery("""
+                INSERT INTO vehicle (id, category, brand, model, year, plate, price, rented, attributes)
+                VALUES (:id, :category, :brand, :model, :year, :plate, :price, :rented, :attributes)
+                ON CONFLICT (id) DO UPDATE SET
+                    category = EXCLUDED.category,
+                    brand = EXCLUDED.brand,
+                    model = EXCLUDED.model,
+                    year = EXCLUDED.year,
+                    plate = EXCLUDED.plate,
+                    price = EXCLUDED.price,
+                    rented = EXCLUDED.rented,
+                    attributes = EXCLUDED.attributes
+                """)
+                .setParameter("id", vehicle.getId())
+                .setParameter("category", vehicle.getCategory())
+                .setParameter("brand", vehicle.getBrand())
+                .setParameter("model", vehicle.getModel())
+                .setParameter("year", vehicle.getYear())
+                .setParameter("plate", vehicle.getPlate())
+                .setParameter("price", vehicle.getPrice())
+                .setParameter("rented", vehicle.isRented())
+                .setParameter("attributes", gson.toJson(vehicle.getAttributes()))
+                .executeUpdate();
+
+        return result > 0;
     }
 
     @Override
     public boolean remove(String id) {
-        VehicleEntity entity = entityManager.find(VehicleEntity.class, id);
+        int result = entityManager.createNativeQuery("""
+                DELETE FROM vehicle
+                WHERE id = :id
+                """)
+                .setParameter("id", id)
+                .executeUpdate();
 
-        if (entity == null) {
-            return false;
-        }
-
-        entityManager.remove(entity);
-        return true;
+        return result > 0;
     }
 
     @Override
     public boolean update(Vehicle vehicle) {
-        VehicleEntity existing = entityManager.find(VehicleEntity.class, vehicle.getId());
+        int result = entityManager.createNativeQuery("""
+                UPDATE vehicle
+                SET category = :category,
+                    brand = :brand,
+                    model = :model,
+                    year = :year,
+                    plate = :plate,
+                    price = :price,
+                    rented = :rented,
+                    attributes = :attributes
+                WHERE id = :id
+                """)
+                .setParameter("category", vehicle.getCategory())
+                .setParameter("brand", vehicle.getBrand())
+                .setParameter("model", vehicle.getModel())
+                .setParameter("year", vehicle.getYear())
+                .setParameter("plate", vehicle.getPlate())
+                .setParameter("price", vehicle.getPrice())
+                .setParameter("rented", vehicle.isRented())
+                .setParameter("attributes", gson.toJson(vehicle.getAttributes()))
+                .setParameter("id", vehicle.getId())
+                .executeUpdate();
 
-        if (existing == null) {
-            return false;
-        }
-
-        entityManager.merge(toEntity(vehicle));
-        return true;
-    }
-
-    private VehicleEntity toEntity(Vehicle vehicle) {
-        return new VehicleEntity(
-                vehicle.getId(),
-                vehicle.getCategory(),
-                vehicle.getBrand(),
-                vehicle.getModel(),
-                vehicle.getYear(),
-                vehicle.getPlate(),
-                vehicle.getPrice(),
-                vehicle.isRented(),
-                gson.toJson(vehicle.getAttributes())
-        );
+        return result > 0;
     }
 
     private Vehicle toModel(VehicleEntity entity) {
