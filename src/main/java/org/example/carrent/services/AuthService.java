@@ -23,7 +23,7 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public String register(String login, String password) {
+    public String register(String login, String password, String address) {
         if (login == null || login.isBlank()) {
             throw new RuntimeException("Login jest wymagany.");
         }
@@ -39,7 +39,8 @@ public class AuthService {
         User user = new User(
                 login,
                 passwordEncoder.encode(password),
-                Role.USER
+                Role.USER,
+                address
         );
 
         userRepository.add(user);

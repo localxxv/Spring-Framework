@@ -80,8 +80,8 @@ public class VehicleJdbcRepository implements IVehicleRepository {
     @Override
     public boolean add(Vehicle vehicle) {
         String sql = """
-                INSERT INTO vehicle (id, category, brand, model, year, plate, price, rented, attributes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO vehicle (id, category, brand, model, year, plate, price, rented, attributes, location_name)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (id) DO UPDATE SET
                     category = EXCLUDED.category,
                     brand = EXCLUDED.brand,
@@ -90,7 +90,8 @@ public class VehicleJdbcRepository implements IVehicleRepository {
                     plate = EXCLUDED.plate,
                     price = EXCLUDED.price,
                     rented = EXCLUDED.rented,
-                    attributes = EXCLUDED.attributes
+                    attributes = EXCLUDED.attributes,
+                    location_name = EXCLUDED.location_name
                 """;
 
         Connection connection = DataSourceUtils.getConnection(dataSource);
@@ -105,6 +106,7 @@ public class VehicleJdbcRepository implements IVehicleRepository {
             ps.setDouble(7, vehicle.getPrice());
             ps.setBoolean(8, vehicle.isRented());
             ps.setString(9, gson.toJson(vehicle.getAttributes()));
+            ps.setString(10, vehicle.getLocationName());
 
             return ps.executeUpdate() > 0;
 
@@ -143,7 +145,8 @@ public class VehicleJdbcRepository implements IVehicleRepository {
                     plate = ?,
                     price = ?,
                     rented = ?,
-                    attributes = ?
+                    attributes = ?,
+                    location_name = ?
                 WHERE id = ?
                 """;
 
@@ -158,7 +161,8 @@ public class VehicleJdbcRepository implements IVehicleRepository {
             ps.setDouble(6, vehicle.getPrice());
             ps.setBoolean(7, vehicle.isRented());
             ps.setString(8, gson.toJson(vehicle.getAttributes()));
-            ps.setString(9, vehicle.getId());
+            ps.setString(9, vehicle.getLocationName());
+            ps.setString(10, vehicle.getId());
 
             return ps.executeUpdate() > 0;
 
@@ -180,6 +184,8 @@ public class VehicleJdbcRepository implements IVehicleRepository {
                 rs.getDouble("price"),
                 rs.getBoolean("rented")
         );
+
+        vehicle.setLocationName(rs.getString("location_name"));
 
         String attrJson = rs.getString("attributes");
 

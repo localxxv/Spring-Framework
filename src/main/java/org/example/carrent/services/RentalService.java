@@ -19,13 +19,16 @@ public class RentalService {
     private final IRentalRepository rentalRepository;
     private final IVehicleRepository vehicleRepository;
     private final IUserRepository userRepository;
+    private final VehicleLocationService vehicleLocationService;
 
     public RentalService(IRentalRepository rentalRepository,
                          IVehicleRepository vehicleRepository,
-                         IUserRepository userRepository) {
+                         IUserRepository userRepository,
+                         VehicleLocationService vehicleLocationService) {
         this.rentalRepository = rentalRepository;
         this.vehicleRepository = vehicleRepository;
         this.userRepository = userRepository;
+        this.vehicleLocationService = vehicleLocationService;
     }
 
     public List<Rental> getAll() {
@@ -97,11 +100,15 @@ public class RentalService {
         Rental rental = rentalRepository.findActiveByUserLogin(userLogin)
                 .orElseThrow(() -> new RuntimeException("Brak aktywnego wypożyczenia."));
 
-        rental.setEndDate(LocalDate.now().toString());
-        rentalRepository.update(rental);
-
         Vehicle vehicle = vehicleRepository.findById(rental.getVehicleId())
                 .orElseThrow(() -> new RuntimeException("Nie znaleziono pojazdu: " + rental.getVehicleId()));
+
+        if (!vehicleLocationService.isAtAllowedLocation(vehicle)) {
+            throw new RuntimeException("Pojazd nie znajduje się w siedzibie firmy ani innym dozwolonym miejscu — nie można zwrócić.");
+        }
+
+        rental.setEndDate(LocalDate.now().toString());
+        rentalRepository.update(rental);
 
         vehicle.setRented(false);
         vehicleRepository.update(vehicle);

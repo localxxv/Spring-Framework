@@ -47,8 +47,8 @@ public class VehicleHibernateRepository implements IVehicleRepository {
     @Override
     public boolean add(Vehicle vehicle) {
         int result = entityManager.createNativeQuery("""
-                INSERT INTO vehicle (id, category, brand, model, year, plate, price, rented, attributes)
-                VALUES (:id, :category, :brand, :model, :year, :plate, :price, :rented, :attributes)
+                INSERT INTO vehicle (id, category, brand, model, year, plate, price, rented, attributes, location_name)
+                VALUES (:id, :category, :brand, :model, :year, :plate, :price, :rented, :attributes, :locationName)
                 ON CONFLICT (id) DO UPDATE SET
                     category = EXCLUDED.category,
                     brand = EXCLUDED.brand,
@@ -57,7 +57,8 @@ public class VehicleHibernateRepository implements IVehicleRepository {
                     plate = EXCLUDED.plate,
                     price = EXCLUDED.price,
                     rented = EXCLUDED.rented,
-                    attributes = EXCLUDED.attributes
+                    attributes = EXCLUDED.attributes,
+                    location_name = EXCLUDED.location_name
                 """)
                 .setParameter("id", vehicle.getId())
                 .setParameter("category", vehicle.getCategory())
@@ -68,6 +69,7 @@ public class VehicleHibernateRepository implements IVehicleRepository {
                 .setParameter("price", vehicle.getPrice())
                 .setParameter("rented", vehicle.isRented())
                 .setParameter("attributes", gson.toJson(vehicle.getAttributes()))
+                .setParameter("locationName", vehicle.getLocationName())
                 .executeUpdate();
 
         return result > 0;
@@ -96,7 +98,8 @@ public class VehicleHibernateRepository implements IVehicleRepository {
                     plate = :plate,
                     price = :price,
                     rented = :rented,
-                    attributes = :attributes
+                    attributes = :attributes,
+                    location_name = :locationName
                 WHERE id = :id
                 """)
                 .setParameter("category", vehicle.getCategory())
@@ -107,6 +110,7 @@ public class VehicleHibernateRepository implements IVehicleRepository {
                 .setParameter("price", vehicle.getPrice())
                 .setParameter("rented", vehicle.isRented())
                 .setParameter("attributes", gson.toJson(vehicle.getAttributes()))
+                .setParameter("locationName", vehicle.getLocationName())
                 .setParameter("id", vehicle.getId())
                 .executeUpdate();
 
@@ -124,6 +128,8 @@ public class VehicleHibernateRepository implements IVehicleRepository {
                 entity.getPrice(),
                 entity.isRented()
         );
+
+        vehicle.setLocationName(entity.getLocationName());
 
         if (entity.getAttributes() != null && !entity.getAttributes().isBlank()) {
             Type type = new TypeToken<Map<String, Object>>() {}.getType();

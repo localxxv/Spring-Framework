@@ -23,13 +23,6 @@ public class UserHibernateRepository implements IUserRepository {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<User> findByLogin(String login) {
-        UserEntity entity = entityManager.find(UserEntity.class, login);
-        return Optional.ofNullable(entity).map(this::toModel);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public List<User> getUsers() {
         return entityManager
                 .createQuery("FROM UserEntity", UserEntity.class)
@@ -40,50 +33,70 @@ public class UserHibernateRepository implements IUserRepository {
     }
 
     @Override
-    public void add(User user) {
-        entityManager.merge(toEntity(user));
-    }
-
-    @Override
-    public boolean remove(String login) {
+    @Transactional(readOnly = true)
+    public Optional<User> findByLogin(String login) {
         UserEntity entity = entityManager.find(UserEntity.class, login);
 
         if (entity == null) {
-            return false;
+            return Optional.empty();
         }
 
-        entityManager.remove(entity);
-        return true;
+        return Optional.of(toModel(entity));
+    }
+
+    @Override
+    public void add(User user) {
+        entityManager.createNativeQuery("""
+                INSERT INTO users (login, password_hash, role, address)
+                VALUES (:login, :passwordHash, :role, :address)
+                ON CONFLICT (login) DO UPDATE SET
+                    password_hash = EXCLUDED.password_hash,
+                    role = EXCLUDED.role,
+                    address = EXCLUDED.address
+                """)
+                .setParameter("login", user.getLogin())
+                .setParameter("passwordHash", user.getPasswordHash())
+                .setParameter("role", user.getRole().name())
+                .setParameter("address", user.getAddress())
+                .executeUpdate();
     }
 
     @Override
     public boolean update(User user) {
-        UserEntity existing = entityManager.find(UserEntity.class, user.getLogin());
+        int updated = entityManager.createNativeQuery("""
+                UPDATE users
+                SET password_hash = :passwordHash,
+                    role = :role,
+                    address = :address
+                WHERE login = :login
+                """)
+                .setParameter("passwordHash", user.getPasswordHash())
+                .setParameter("role", user.getRole().name())
+                .setParameter("address", user.getAddress())
+                .setParameter("login", user.getLogin())
+                .executeUpdate();
 
-        if (existing == null) {
-            return false;
-        }
-
-        existing.setPasswordHash(user.getPasswordHash());
-        existing.setRole(user.getRole().name());
-
-        entityManager.merge(existing);
-        return true;
+        return updated > 0;
     }
 
-    private UserEntity toEntity(User user) {
-        return new UserEntity(
-                user.getLogin(),
-                user.getPasswordHash(),
-                user.getRole().name()
-        );
+    @Override
+    public boolean remove(String login) {
+        int deleted = entityManager.createNativeQuery("""
+                DELETE FROM users
+                WHERE login = :login
+                """)
+                .setParameter("login", login)
+                .executeUpdate();
+
+        return deleted > 0;
     }
 
     private User toModel(UserEntity entity) {
         return new User(
                 entity.getLogin(),
                 entity.getPasswordHash(),
-                Role.valueOf(entity.getRole())
+                Role.valueOf(entity.getRole()),
+                entity.getAddress()
         );
     }
 }

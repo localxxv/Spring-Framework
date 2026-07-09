@@ -33,6 +33,9 @@ public class VehicleEntity {
     @Column(name = "rented", nullable = false)
     private boolean rented;
 
+    @Column(name = "location_name")
+    private String locationName;
+
     @Column(name = "attributes", columnDefinition = "TEXT")
     private String attributes;
 
@@ -62,7 +65,9 @@ public class VehicleEntity {
     public String getPlate() { return plate; }
     public double getPrice() { return price; }
     public boolean isRented() { return rented; }
+    public String getLocationName() { return locationName; }
     public String getAttributes() { return attributes; }
     public void setRented(boolean rented) { this.rented = rented; }
+    public void setLocationName(String locationName) { this.locationName = locationName; }
     public void setAttributes(String attributes) { this.attributes = attributes; }
 }

@@ -42,6 +42,7 @@ public class SecurityConfig {
                         .requestMatchers("/health").permitAll()
                         .requestMatchers("/categories/**").permitAll()
                         .requestMatchers("/api/categories/**").permitAll()
+                        .requestMatchers("/error").permitAll()
 
                         .requestMatchers(HttpMethod.GET, "/vehicles/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/vehicles/**").authenticated()
@@ -58,6 +59,13 @@ public class SecurityConfig {
                         .requestMatchers("/rentals/**").authenticated()
                         .requestMatchers("/api/rentals/**").authenticated()
 
+                        .requestMatchers("/payments/**").authenticated()
+                        .requestMatchers("/api/payments/**").authenticated()
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui.html"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider)

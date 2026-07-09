@@ -13,6 +13,7 @@ public class Vehicle {
     private String plate;
     private double price;
     private boolean rented;
+    private String locationName;
     private Map<String, Object> attributes = new HashMap<>();
 
     public Vehicle(String id, String category, String brand, String model,
@@ -37,42 +38,21 @@ public class Vehicle {
         this.plate = other.plate;
         this.price = other.price;
         this.rented = other.rented;
+        this.locationName = other.locationName;
         this.attributes = other.attributes == null
                 ? new HashMap<>()
                 : new HashMap<>(other.attributes);
     }
 
-    public String getId() {
-        return id;
-    }
-
-    public String getCategory() {
-        return category;
-    }
-
-    public String getBrand() {
-        return brand;
-    }
-
-    public String getModel() {
-        return model;
-    }
-
-    public int getYear() {
-        return year;
-    }
-
-    public String getPlate() {
-        return plate;
-    }
-
-    public double getPrice() {
-        return price;
-    }
-
-    public boolean isRented() {
-        return rented;
-    }
+    public String getId() { return id; }
+    public String getCategory() { return category; }
+    public String getBrand() { return brand; }
+    public String getModel() { return model; }
+    public int getYear() { return year; }
+    public String getPlate() { return plate; }
+    public double getPrice() { return price; }
+    public boolean isRented() { return rented; }
+    public String getLocationName() { return locationName; }
 
     public Map<String, Object> getAttributes() {
         if (attributes == null) {
@@ -81,9 +61,8 @@ public class Vehicle {
         return Collections.unmodifiableMap(attributes);
     }
 
-    public void setRented(boolean rented) {
-        this.rented = rented;
-    }
+    public void setRented(boolean rented) { this.rented = rented; }
+    public void setLocationName(String locationName) { this.locationName = locationName; }
 
     public void addAttribute(String name, Object value) {
         if (attributes == null) {
@@ -107,6 +86,7 @@ public class Vehicle {
                 ", plate='" + plate + '\'' +
                 ", price=" + price +
                 ", rented=" + rented +
+                ", locationName='" + locationName + '\'' +
                 ", attributes=" + getAttributes() +
                 '}';
     }

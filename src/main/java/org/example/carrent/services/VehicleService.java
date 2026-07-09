@@ -95,6 +95,13 @@ public class VehicleService {
         return vehicleRepository.update(vehicle);
     }
 
+    public Vehicle updateLocation(String id, String locationName) {
+        Vehicle vehicle = findById(id);
+        vehicle.setLocationName(locationName);
+        vehicleRepository.update(vehicle);
+        return vehicle;
+    }
+
     private void checkCanDeleteVehicle(String id) {
         Vehicle vehicle = findById(id);
 

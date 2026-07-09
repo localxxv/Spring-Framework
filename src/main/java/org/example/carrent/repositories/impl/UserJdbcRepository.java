@@ -8,10 +8,7 @@ import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.stereotype.Repository;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -27,8 +24,39 @@ public class UserJdbcRepository implements IUserRepository {
     }
 
     @Override
+    public List<User> getUsers() {
+        List<User> users = new ArrayList<>();
+
+        String sql = """
+                SELECT login, password_hash, role, address
+                FROM users
+                """;
+
+        Connection connection = DataSourceUtils.getConnection(dataSource);
+
+        try (PreparedStatement ps = connection.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                users.add(mapRow(rs));
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Błąd getUsers: " + e.getMessage(), e);
+        } finally {
+            DataSourceUtils.releaseConnection(connection, dataSource);
+        }
+
+        return users;
+    }
+
+    @Override
     public Optional<User> findByLogin(String login) {
-        String sql = "SELECT * FROM users WHERE login = ?";
+        String sql = """
+                SELECT login, password_hash, role, address
+                FROM users
+                WHERE login = ?
+                """;
 
         Connection connection = DataSourceUtils.getConnection(dataSource);
 
@@ -42,7 +70,7 @@ public class UserJdbcRepository implements IUserRepository {
             }
 
         } catch (SQLException e) {
-            throw new RuntimeException("Błąd findByLogin", e);
+            throw new RuntimeException("Błąd findByLogin: " + e.getMessage(), e);
         } finally {
             DataSourceUtils.releaseConnection(connection, dataSource);
         }
@@ -51,36 +79,14 @@ public class UserJdbcRepository implements IUserRepository {
     }
 
     @Override
-    public List<User> getUsers() {
-        List<User> users = new ArrayList<>();
-        String sql = "SELECT * FROM users";
-
-        Connection connection = DataSourceUtils.getConnection(dataSource);
-
-        try (PreparedStatement ps = connection.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-
-            while (rs.next()) {
-                users.add(mapRow(rs));
-            }
-
-        } catch (SQLException e) {
-            throw new RuntimeException("Błąd getUsers", e);
-        } finally {
-            DataSourceUtils.releaseConnection(connection, dataSource);
-        }
-
-        return users;
-    }
-
-    @Override
     public void add(User user) {
         String sql = """
-                INSERT INTO users (login, password_hash, role)
-                VALUES (?, ?, ?)
+                INSERT INTO users (login, password_hash, role, address)
+                VALUES (?, ?, ?, ?)
                 ON CONFLICT (login) DO UPDATE SET
                     password_hash = EXCLUDED.password_hash,
-                    role = EXCLUDED.role
+                    role = EXCLUDED.role,
+                    address = EXCLUDED.address
                 """;
 
         Connection connection = DataSourceUtils.getConnection(dataSource);
@@ -89,11 +95,39 @@ public class UserJdbcRepository implements IUserRepository {
             ps.setString(1, user.getLogin());
             ps.setString(2, user.getPasswordHash());
             ps.setString(3, user.getRole().name());
+            ps.setString(4, user.getAddress());
 
             ps.executeUpdate();
 
         } catch (SQLException e) {
-            throw new RuntimeException("Błąd add user", e);
+            throw new RuntimeException("Błąd add user: " + e.getMessage(), e);
+        } finally {
+            DataSourceUtils.releaseConnection(connection, dataSource);
+        }
+    }
+
+    @Override
+    public boolean update(User user) {
+        String sql = """
+                UPDATE users
+                SET password_hash = ?,
+                    role = ?,
+                    address = ?
+                WHERE login = ?
+                """;
+
+        Connection connection = DataSourceUtils.getConnection(dataSource);
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, user.getPasswordHash());
+            ps.setString(2, user.getRole().name());
+            ps.setString(3, user.getAddress());
+            ps.setString(4, user.getLogin());
+
+            return ps.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Błąd update user: " + e.getMessage(), e);
         } finally {
             DataSourceUtils.releaseConnection(connection, dataSource);
         }
@@ -101,7 +135,10 @@ public class UserJdbcRepository implements IUserRepository {
 
     @Override
     public boolean remove(String login) {
-        String sql = "DELETE FROM users WHERE login = ?";
+        String sql = """
+                DELETE FROM users
+                WHERE login = ?
+                """;
 
         Connection connection = DataSourceUtils.getConnection(dataSource);
 
@@ -110,27 +147,7 @@ public class UserJdbcRepository implements IUserRepository {
             return ps.executeUpdate() > 0;
 
         } catch (SQLException e) {
-            throw new RuntimeException("Błąd remove user", e);
-        } finally {
-            DataSourceUtils.releaseConnection(connection, dataSource);
-        }
-    }
-
-    @Override
-    public boolean update(User user) {
-        String sql = "UPDATE users SET password_hash = ?, role = ? WHERE login = ?";
-
-        Connection connection = DataSourceUtils.getConnection(dataSource);
-
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setString(1, user.getPasswordHash());
-            ps.setString(2, user.getRole().name());
-            ps.setString(3, user.getLogin());
-
-            return ps.executeUpdate() > 0;
-
-        } catch (SQLException e) {
-            throw new RuntimeException("Błąd update user", e);
+            throw new RuntimeException("Błąd remove user: " + e.getMessage(), e);
         } finally {
             DataSourceUtils.releaseConnection(connection, dataSource);
         }
@@ -140,7 +157,8 @@ public class UserJdbcRepository implements IUserRepository {
         return new User(
                 rs.getString("login"),
                 rs.getString("password_hash"),
-                Role.valueOf(rs.getString("role"))
+                Role.valueOf(rs.getString("role")),
+                rs.getString("address")
         );
     }
 }
